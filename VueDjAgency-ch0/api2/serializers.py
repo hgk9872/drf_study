@@ -15,15 +15,16 @@ class PostSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'image', 'like', 'category']
 
 class PostListSerializer(serializers.ModelSerializer):
+    category = serializers.CharField(source='category.name')
     class Meta:
         model = Post
         # fields = '__all__'
         fields = ['id', 'title', 'image', 'like', 'category']
 
-class PostLikeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Post
-        fields = ['like']
+# class PostLikeSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Post
+#         fields = ['like']
 
 class PostRetrieveSerializer(serializers.ModelSerializer):
     class Meta:

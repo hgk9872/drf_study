@@ -15,16 +15,18 @@
 #     queryset = Comment.objects.all()
 #     serializer_class = CommentSerializer
 # ----------------------------------------------
-from rest_framework.generics import ListAPIView, RetrieveAPIView, CreateAPIView, UpdateAPIView
+from collections import OrderedDict
+from rest_framework.generics import GenericAPIView, ListAPIView, RetrieveAPIView, CreateAPIView, UpdateAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from api2.serializers import CateTagSerializer, CommentSerializer, PostLikeSerializer, PostListSerializer, PostRetrieveSerializer
+from api2.serializers import CateTagSerializer, CommentSerializer, PostListSerializer, PostRetrieveSerializer
 from blog.models import Category, Comment, Post, Tag
 
 
-class PostListAPIView(ListAPIView):
-    queryset = Post.objects.all()
-    serializer_class = PostListSerializer
+# class PostListAPIView(ListAPIView):
+#     queryset = Post.objects.all()
+#     serializer_class = PostListSerializer
 
 class PostRetrieveAPIView(RetrieveAPIView):
     queryset = Post.objects.all()
@@ -34,25 +36,38 @@ class CommentCreateAPIView(CreateAPIView):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
 
-class PostLikeAPIView(UpdateAPIView):
+# class PostLikeAPIView(UpdateAPIView):
+#     queryset = Post.objects.all()
+#     serializer_class = PostLikeSerializer
+
+#     # PATCH method
+#     def update(self, request, *args, **kwargs):
+#         partial = kwargs.pop('partial', False)
+#         instance = self.get_object()
+#         data = {'like': instance.like + 1}
+#         # data = instance.like + 1
+#         serializer = self.get_serializer(instance, data=data, partial=partial)
+#         serializer.is_valid(raise_exception=True)
+#         self.perform_update(serializer)
+
+#         if getattr(instance, '_prefetched_objects_cache', None):
+#             # If 'prefetch_related' has been applied to a queryset, we need to
+#             # forcibly invalidate the prefetch cache on the instance.
+#             instance._prefetched_objects_cache = {}
+
+#         return Response(data['like'])
+
+# class PostLikeAPIView(UpdateAPIView):
+class PostLikeAPIView(GenericAPIView):
     queryset = Post.objects.all()
-    serializer_class = PostLikeSerializer
 
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
+    # PATCH method
+    def get(self, request, *args, **kwargs):
         instance = self.get_object()
-        data = {'like': instance.like + 1}
-        # data = instance.like + 1
-        serializer = self.get_serializer(instance, data=data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
+        instance.like += 1
+        instance.save()
 
-        if getattr(instance, '_prefetched_objects_cache', None):
-            # If 'prefetch_related' has been applied to a queryset, we need to
-            # forcibly invalidate the prefetch cache on the instance.
-            instance._prefetched_objects_cache = {}
-
-        return Response(data['like'])
+        return Response(instance.like)
 
 class CateTagAPIView(APIView):
     def get(self, request, *args, **kwargs):
@@ -64,4 +79,21 @@ class CateTagAPIView(APIView):
         }
 
         serializer = CateTagSerializer(instance=data) # 직렬화
-        return Response(serializer.data) # serializer.data 주의!
+        return Response(serializer.data) # .data 주의!
+
+class PostPageNumberPagination(PageNumberPagination):
+    page_size = 3
+    # page_size_query_param = 'page_size'
+    # max_page_size = 1000
+
+    def get_paginated_response(self, data):
+        return Response(OrderedDict([
+            ('postList', data),
+            ('pageCnt', self.page.paginator.num_pages),
+            ('curPage', self.page.number),
+        ]))
+
+class PostListAPIView(ListAPIView):
+    queryset = Post.objects.all()
+    serializer_class = PostListSerializer
+    pagination_class = PostPageNumberPagination
